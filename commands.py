@@ -16,7 +16,7 @@ from telegram.constants import ParseMode
 from config import (
     BOT_NAME, DEVELOPER_ID, JIKAN_BASE_URL,
     Messages, Format, Emojis, is_dev, is_owner, is_admin,
-    can_restrict, can_delete, can_pin, can_promote
+    can_restrict, can_delete, can_pin, can_promote, CallbackData
 )
 from database import db
 from buttons import Buttons
@@ -28,58 +28,54 @@ logger = logging.getLogger(__name__)
 # ============== UTILITY FUNCTIONS ==============
 
 def format_anime_info(anime: dict) -> str:
-    """Format anime information for display"""
+    """Format anime information for display - Telegram Compatible"""
     title = anime.get('title', 'Unknown')
     title_jp = anime.get('title_japanese', 'N/A')
     episodes = anime.get('episodes', 'Unknown')
     score = anime.get('score', 'N/A')
     status = anime.get('status', 'Unknown')
     rating = anime.get('rating', 'N/A')
-    synopsis = anime.get('synopsis', 'No synopsis available.')[:300]
-    if len(anime.get('synopsis', '')) > 300:
+    synopsis = anime.get('synopsis', 'No synopsis available.')[:250]
+    if len(anime.get('synopsis', '')) > 250:
         synopsis += "..."
     
     genres = ', '.join([g['name'] for g in anime.get('genres', [])]) or 'N/A'
     
-    text = f"""
-{Format.TOP_LEFT}{Format.HORIZONTAL * 33}{Format.TOP_RIGHT}
-{Format.VERTICAL} {Emojis.ANIME} **{title}**{Format.VERTICAL}
-{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}
-{Format.VERTICAL} **Japanese:** {title_jp[:25]}{Format.VERTICAL}
-{Format.VERTICAL} **Episodes:** {episodes}{Format.VERTICAL}
-{Format.VERTICAL} **Score:** {Emojis.STAR} {score}{Format.VERTICAL}
-{Format.VERTICAL} **Status:** {status}{Format.VERTICAL}
-{Format.VERTICAL} **Rating:** {rating}{Format.VERTICAL}
-{Format.VERTICAL} **Genres:** {genres[:25]}{Format.VERTICAL}
-{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}
-{Format.VERTICAL} **Synopsis:**{Format.VERTICAL}
-{Format.VERTICAL} {synopsis[:30]}{Format.VERTICAL}
-{Format.BOTTOM_LEFT}{Format.HORIZONTAL * 33}{Format.BOTTOM_RIGHT}
-"""
+    text = f"""╔═══════════════════╗
+║ 🎬 **{title[:20]}** ║
+╠═══════════════════╣
+║ 🇯🇵 **Japanese:** {title_jp[:18]}
+║ 📺 **Episodes:** {episodes}
+║ ⭐ **Score:** {score}
+║ 📊 **Status:** {status}
+║ 🔞 **Rating:** {rating}
+║ 🏷️ **Genres:** {genres[:20]}
+╠═══════════════════╣
+║ 📝 **Synopsis:**
+║ {synopsis[:28]}
+╚═══════════════════╝"""
     return text
 
 
 def format_character_info(character: dict) -> str:
-    """Format character information for display"""
+    """Format character information for display - Telegram Compatible"""
     name = character.get('name', 'Unknown')
     name_jp = character.get('name_kanji', 'N/A')
-    about = character.get('about', 'No information available.')[:300]
-    if len(character.get('about', '')) > 300:
+    about = character.get('about', 'No information available.')[:250]
+    if len(character.get('about', '')) > 250:
         about += "..."
     
     favorites = character.get('favorites', 0)
     
-    text = f"""
-{Format.TOP_LEFT}{Format.HORIZONTAL * 33}{Format.TOP_RIGHT}
-{Format.VERTICAL} {Emojis.CHARACTER} **{name}**{Format.VERTICAL}
-{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}
-{Format.VERTICAL} **Kanji:** {name_jp[:25]}{Format.VERTICAL}
-{Format.VERTICAL} {Emojis.HEART} Favorites: {favorites}{Format.VERTICAL}
-{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}
-{Format.VERTICAL} **About:**{Format.VERTICAL}
-{Format.VERTICAL} {about[:30]}{Format.VERTICAL}
-{Format.BOTTOM_LEFT}{Format.HORIZONTAL * 33}{Format.BOTTOM_RIGHT}
-"""
+    text = f"""╔═══════════════════╗
+║ 👤 **{name[:20]}** ║
+╠═══════════════════╣
+║ 🈯 **Kanji:** {name_jp[:20]}
+║ ❤️ **Favorites:** {favorites}
+╠═══════════════════╣
+║ 📝 **About:**
+║ {about[:28]}
+╚═══════════════════╝"""
     return text
 
 
@@ -103,7 +99,7 @@ async def send_or_edit_message(update: Update, context: ContextTypes.DEFAULT_TYP
     # Get user session
     session = db.get_user_session(user_id, chat_id)
     
-    if session and update.callback_query:
+    if update.callback_query:
         # Edit existing message
         try:
             if photo:
@@ -118,7 +114,7 @@ async def send_or_edit_message(update: Update, context: ContextTypes.DEFAULT_TYP
                     reply_markup=reply_markup,
                     parse_mode=parse_mode
                 )
-            return session['message_id']
+            return session['message_id'] if session else None
         except Exception as e:
             logger.error(f"Error editing message: {e}")
     
@@ -178,30 +174,26 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Get start video from config
     start_video = db.get_config('start_video')
     
-    # Create welcome message
-    welcome_box = Format.box(
-        f"{Emojis.BOT} Welcome to {BOT_NAME}\n"
-        f"Your ultimate anime companion!",
-        f" {BOT_NAME} {Emojis.BOT} "
-    )
-    
-    stats_text = f"""
-{welcome_box}
+    # Create aesthetic welcome message
+    stats_text = f"""╔═══════════════════╗
+║   🤖 **{BOT_NAME}**   ║
+╠═══════════════════╣
+║ ✨ Welcome {user.first_name[:10]}!
+║
+║ 📊 **Statistics:**
+║ ├ 👥 Groups: `{total_groups}`
+║ ├ 👤 Users: `{total_users}`
+║ └ ⚡ Status: Online
+║
+║ 💫 **Features:**
+║ ├ 🔍 Anime Search
+║ ├ 👤 Character Info
+║ ├ 📺 Airing Schedule
+║ ├ ⚙️ Group Management
+║ └ 🛡️ Anti-Raid
+╚═══════════════════╝
 
-📊 **Bot Statistics:**
-├ 👥 Groups: `{total_groups}`
-├ 👤 Users: `{total_users}`
-└ ⚡ Commands: Available
-
-💫 **Features:**
-├ 🔍 Anime Search
-├ 👤 Character Info
-├ 📺 Airing Schedule
-├ ⚙️ Group Management
-└ 🛡️ Anti-Raid Protection
-
-➕ Add me to your group for full power!
-"""
+➕ Add me to your group for full power!"""
     
     # Send with video or text
     if start_video:
@@ -235,41 +227,31 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Get help image from config
     help_img = db.get_config('help_image')
     
-    help_box = Format.box("📖 Help Menu", " Help ")
-    
-    help_text = f"""
-{help_box}
-
-**User Commands:**
-├ /start - Start the bot
-├ /help - Show this menu
-├ /anime `<name>` - Search anime
-├ /character `<name>` - Search character
-├ /airing - Currently airing
-├ /top - Top anime
-└ /profile - Your profile
-
-**Admin Commands:**
-├ /mute - Mute user (reply)
-├ /unmute - Unmute user
-├ /kick - Kick user
-├ /ban - Ban user
-├ /unban - Unban user
-├ /warn - Warn user
-├ /purge `<n>` - Delete messages
-├ /pin - Pin message
-├ /unpin - Unpin message
-└ /lock - Lock chat
-
-**Owner Commands:**
-├ /settings - Group settings
-├ /welcome - Toggle welcome
-├ /goodbye - Toggle goodbye
-├ /captcha - Toggle captcha
-├ /filter - Add filter
-├ /stopfilter - Remove filter
-└ /promote - Promote admin
-"""
+    help_text = f"""╔═══════════════════╗
+║ 📖 **Help Menu**    ║
+╠═══════════════════╣
+║ 👤 **User Commands:**
+║ ├ /start - Start bot
+║ ├ /help - This menu
+║ ├ /anime `<name>` - Search
+║ ├ /character `<name>` - Search
+║ ├ /airing - Now airing
+║ ├ /top - Top anime
+║ └ /profile - Your profile
+║
+║ 👮 **Admin Commands:**
+║ ├ /mute, /unmute
+║ ├ /kick, /ban, /unban
+║ ├ /warn, /purge
+║ ├ /pin, /unpin
+║ └ /lock, /unlock
+║
+║ 👑 **Owner Commands:**
+║ ├ /settings - Configure
+║ ├ /welcome, /goodbye
+║ ├ /captcha, /filter
+║ └ /promote, /demote
+╚═══════════════════╝"""
     
     if chat.type == 'private':
         if help_img:
@@ -447,17 +429,17 @@ async def airing_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await processing_msg.edit_text("❌ No airing anime found.")
             return
         
-        text = f"{Format.TOP_LEFT}{Format.HORIZONTAL * 33}{Format.TOP_RIGHT}\n"
-        text += f"{Format.VERTICAL} {Emojis.ANIME} **Currently Airing**{Format.VERTICAL}\n"
-        text += f"{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}\n"
+        text = "╔═══════════════════╗\n"
+        text += "║ 📺 **Now Airing**   ║\n"
+        text += "╠═══════════════════╣\n"
         
         for i, anime in enumerate(data['data'][:10], 1):
-            title = anime.get('title', 'Unknown')[:25]
+            title = anime.get('title', 'Unknown')[:18]
             score = anime.get('score', 'N/A')
-            text += f"{Format.VERTICAL} `{i}.` {title}{Format.VERTICAL}\n"
-            text += f"{Format.VERTICAL}    {Emojis.STAR} {score}{Format.VERTICAL}\n"
+            text += f"║ `{i:2d}.` {title}\n"
+            text += f"║     ⭐ {score}\n"
         
-        text += f"{Format.BOTTOM_LEFT}{Format.HORIZONTAL * 33}{Format.BOTTOM_RIGHT}"
+        text += "╚═══════════════════╝"
         
         await processing_msg.edit_text(
             text,
@@ -492,17 +474,17 @@ async def top_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await processing_msg.edit_text("❌ No top anime found.")
             return
         
-        text = f"{Format.TOP_LEFT}{Format.HORIZONTAL * 33}{Format.TOP_RIGHT}\n"
-        text += f"{Format.VERTICAL} {Emojis.FIRE} **Top Anime**{Format.VERTICAL}\n"
-        text += f"{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}\n"
+        text = "╔═══════════════════╗\n"
+        text += "║ 🔥 **Top Anime**    ║\n"
+        text += "╠═══════════════════╣\n"
         
         for i, anime in enumerate(data['data'][:10], 1):
-            title = anime.get('title', 'Unknown')[:22]
+            title = anime.get('title', 'Unknown')[:16]
             score = anime.get('score', 'N/A')
-            text += f"{Format.VERTICAL} `{i}.` {title}{Format.VERTICAL}\n"
-            text += f"{Format.VERTICAL}    {Emojis.STAR} {score}{Format.VERTICAL}\n"
+            text += f"║ `{i:2d}.` {title}\n"
+            text += f"║     ⭐ {score}\n"
         
-        text += f"{Format.BOTTOM_LEFT}{Format.HORIZONTAL * 33}{Format.BOTTOM_RIGHT}"
+        text += "╚═══════════════════╝"
         
         await processing_msg.edit_text(
             text,
@@ -532,23 +514,23 @@ async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         member_data = None
     
-    text = f"""
-{Format.TOP_LEFT}{Format.HORIZONTAL * 33}{Format.TOP_RIGHT}
-{Format.VERTICAL} {Emojis.USER} **User Profile**{Format.VERTICAL}
-{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}
-{Format.VERTICAL} **Name:** {user.first_name}{Format.VERTICAL}
-{Format.VERTICAL} **ID:** `{user.id}`{Format.VERTICAL}
-{Format.VERTICAL} **Username:** @{user.username or 'N/A'}{Format.VERTICAL}
-{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}
-{Format.VERTICAL} **Stats:**{Format.VERTICAL}
-{Format.VERTICAL} 📊 Commands: {user_data.get('command_count', 0) if user_data else 0}{Format.VERTICAL}
-"""
+    text = f"""╔═══════════════════╗
+║ 👤 **Your Profile** ║
+╠═══════════════════╣
+║ 📝 **Name:** {user.first_name[:15]}
+║ 🆔 **ID:** `{user.id}`
+║ 🔗 **Username:** @{user.username or 'N/A'}
+╠═══════════════════╣
+║ 📊 **Statistics:**
+║ ├ 📈 Commands: {user_data.get('command_count', 0) if user_data else 0}"""
     
     if member_data:
-        text += f"{Format.VERTICAL} ⚠️ Warnings: {member_data.get('warn_count', 0)}{Format.VERTICAL}\n"
-        text += f"{Format.VERTICAL} 💬 Messages: {member_data.get('messages_count', 0)}{Format.VERTICAL}\n"
+        text += f"\n║ ├ ⚠️ Warnings: {member_data.get('warn_count', 0)}"
+        text += f"\n║ └ 💬 Messages: {member_data.get('messages_count', 0)}"
+    else:
+        text += "\n║ └ 👥 Join a group!"
     
-    text += f"{Format.BOTTOM_LEFT}{Format.HORIZONTAL * 33}{Format.BOTTOM_RIGHT}"
+    text += "\n╚═══════════════════╝"
     
     await update.message.reply_text(
         text,
@@ -573,7 +555,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_restrict(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to restrict members.")
+        await update.message.reply_text("⛔ You don't have permission to restrict members.")
         return
     
     if not update.message.reply_to_message:
@@ -584,7 +566,7 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Can't mute admins
     if is_admin(context.bot, chat.id, target.id):
-        await update.message.reply_text("❌ Cannot mute an admin.")
+        await update.message.reply_text("⛔ Cannot mute an admin.")
         return
     
     try:
@@ -596,7 +578,12 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.add_log(chat.id, user.id, 'mute', target.id)
         
         await update.message.reply_text(
-            f"{Emojis.CHECK} **Muted** {target.mention_html()}",
+            f"╔═══════════════════╗\n"
+            f"║ ✅ User Muted       ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 👤 {target.mention_html()}\n"
+            f"║ 🔇 Cannot send msgs\n"
+            f"╚═══════════════════╝",
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
@@ -618,7 +605,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_restrict(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to restrict members.")
+        await update.message.reply_text("⛔ You don't have permission to restrict members.")
         return
     
     if not update.message.reply_to_message:
@@ -642,7 +629,12 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.add_log(chat.id, user.id, 'unmute', target.id)
         
         await update.message.reply_text(
-            f"{Emojis.CHECK} **Unmuted** {target.mention_html()}",
+            f"╔═══════════════════╗\n"
+            f"║ ✅ User Unmuted     ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 👤 {target.mention_html()}\n"
+            f"║ 🔊 Can send msgs\n"
+            f"╚═══════════════════╝",
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
@@ -664,7 +656,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_restrict(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to kick members.")
+        await update.message.reply_text("⛔ You don't have permission to kick members.")
         return
     
     if not update.message.reply_to_message:
@@ -674,7 +666,7 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target = update.message.reply_to_message.from_user
     
     if is_admin(context.bot, chat.id, target.id):
-        await update.message.reply_text("❌ Cannot kick an admin.")
+        await update.message.reply_text("⛔ Cannot kick an admin.")
         return
     
     try:
@@ -685,7 +677,12 @@ async def kick_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.add_log(chat.id, user.id, 'kick', target.id)
         
         await update.message.reply_text(
-            f"{Emojis.CHECK} **Kicked** {target.mention_html()}",
+            f"╔═══════════════════╗\n"
+            f"║ ✅ User Kicked      ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 👤 {target.mention_html()}\n"
+            f"║ 👢 Removed from group\n"
+            f"╚═══════════════════╝",
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
@@ -707,7 +704,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_restrict(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to ban members.")
+        await update.message.reply_text("⛔ You don't have permission to ban members.")
         return
     
     if not update.message.reply_to_message:
@@ -717,7 +714,7 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target = update.message.reply_to_message.from_user
     
     if is_admin(context.bot, chat.id, target.id):
-        await update.message.reply_text("❌ Cannot ban an admin.")
+        await update.message.reply_text("⛔ Cannot ban an admin.")
         return
     
     try:
@@ -727,7 +724,12 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.add_log(chat.id, user.id, 'ban', target.id)
         
         await update.message.reply_text(
-            f"{Emojis.CHECK} **Banned** {target.mention_html()}",
+            f"╔═══════════════════╗\n"
+            f"║ ✅ User Banned      ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 👤 {target.mention_html()}\n"
+            f"║ 🚫 Cannot rejoin\n"
+            f"╚═══════════════════╝",
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
@@ -749,7 +751,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_restrict(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to unban members.")
+        await update.message.reply_text("⛔ You don't have permission to unban members.")
         return
     
     if not context.args:
@@ -763,7 +765,15 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Log action
         db.add_log(chat.id, user.id, 'unban', target_id)
         
-        await update.message.reply_text(f"{Emojis.CHECK} **Unbanned** user `{target_id}`", parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(
+            f"╔═══════════════════╗\n"
+            f"║ ✅ User Unbanned    ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🆔 `{target_id}`\n"
+            f"║ 🔓 Can rejoin now\n"
+            f"╚═══════════════════╝",
+            parse_mode=ParseMode.MARKDOWN
+        )
     except ValueError:
         await update.message.reply_text("❌ Invalid user ID.")
     except Exception as e:
@@ -791,7 +801,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target = update.message.reply_to_message.from_user
     
     if is_admin(context.bot, chat.id, target.id):
-        await update.message.reply_text("❌ Cannot warn an admin.")
+        await update.message.reply_text("⛔ Cannot warn an admin.")
         return
     
     reason = ' '.join(context.args) or "No reason provided"
@@ -807,14 +817,23 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if warn_count >= 3:
             await context.bot.ban_chat_member(chat.id, target.id)
             await update.message.reply_text(
-                f"{Emojis.WARNING} {target.mention_html()} **banned** for reaching 3 warnings!",
+                f"╔═══════════════════╗\n"
+                f"║ 🚫 User Banned!     ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ 👤 {target.mention_html()}\n"
+                f"║ ⚠️ Reached 3 warns\n"
+                f"╚═══════════════════╝",
                 parse_mode=ParseMode.HTML
             )
         else:
             await update.message.reply_text(
-                f"{Emojis.WARNING} **Warned** {target.mention_html()}\n"
-                f"Warnings: {warn_count}/3\n"
-                f"Reason: {reason}",
+                f"╔═══════════════════╗\n"
+                f"║ ⚠️ User Warned      ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ 👤 {target.mention_html()}\n"
+                f"║ 📊 Warns: {warn_count}/3\n"
+                f"║ 📝 {reason[:20]}\n"
+                f"╚═══════════════════╝",
                 parse_mode=ParseMode.HTML
             )
     except Exception as e:
@@ -836,7 +855,7 @@ async def purge_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_delete(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to delete messages.")
+        await update.message.reply_text("⛔ You don't have permission to delete messages.")
         return
     
     if not context.args:
@@ -873,7 +892,11 @@ async def purge_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Send confirmation and delete it after 3 seconds
         confirm_msg = await context.bot.send_message(
             chat.id,
-            f"{Emojis.CHECK} Deleted {deleted} messages."
+            f"╔═══════════════════╗\n"
+            f"║ ✅ Purge Complete   ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🗑️ Deleted: {deleted} msgs\n"
+            f"╚═══════════════════╝"
         )
         
         # Schedule deletion
@@ -901,7 +924,7 @@ async def pin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_pin(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to pin messages.")
+        await update.message.reply_text("⛔ You don't have permission to pin messages.")
         return
     
     if not update.message.reply_to_message:
@@ -918,7 +941,13 @@ async def pin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Log action
         db.add_log(chat.id, user.id, 'pin', update.message.reply_to_message.from_user.id)
         
-        await update.message.reply_text(f"{Emojis.CHECK} Message pinned!")
+        await update.message.reply_text(
+            f"╔═══════════════════╗\n"
+            f"║ ✅ Message Pinned   ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📌 Pinned to top\n"
+            f"╚═══════════════════╝"
+        )
     except Exception as e:
         logger.error(f"Error pinning message: {e}")
         await update.message.reply_text(Messages.ERROR)
@@ -938,7 +967,7 @@ async def unpin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_pin(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to unpin messages.")
+        await update.message.reply_text("⛔ You don't have permission to unpin messages.")
         return
     
     try:
@@ -947,7 +976,13 @@ async def unpin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Log action
         db.add_log(chat.id, user.id, 'unpin')
         
-        await update.message.reply_text(f"{Emojis.CHECK} Message unpinned!")
+        await update.message.reply_text(
+            f"╔═══════════════════╗\n"
+            f"║ ✅ Message Unpinned ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📍 Removed from top\n"
+            f"╚═══════════════════╝"
+        )
     except Exception as e:
         logger.error(f"Error unpinning message: {e}")
         await update.message.reply_text(Messages.ERROR)
@@ -967,7 +1002,7 @@ async def lock_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_restrict(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to lock the chat.")
+        await update.message.reply_text("⛔ You don't have permission to lock the chat.")
         return
     
     try:
@@ -978,7 +1013,14 @@ async def lock_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Log action
         db.add_log(chat.id, user.id, 'lock')
         
-        await update.message.reply_text(f"{Emojis.CHECK} Chat locked! 🔒")
+        await update.message.reply_text(
+            f"╔═══════════════════╗\n"
+            f"║ 🔒 Chat Locked      ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🚫 No one can send\n"
+            f"║    messages now\n"
+            f"╚═══════════════════╝"
+        )
     except Exception as e:
         logger.error(f"Error locking chat: {e}")
         await update.message.reply_text(Messages.ERROR)
@@ -998,7 +1040,7 @@ async def unlock_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not can_restrict(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to unlock the chat.")
+        await update.message.reply_text("⛔ You don't have permission to unlock the chat.")
         return
     
     try:
@@ -1015,7 +1057,14 @@ async def unlock_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Log action
         db.add_log(chat.id, user.id, 'unlock')
         
-        await update.message.reply_text(f"{Emojis.CHECK} Chat unlocked! 🔓")
+        await update.message.reply_text(
+            f"╔═══════════════════╗\n"
+            f"║ 🔓 Chat Unlocked    ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ ✅ Everyone can\n"
+            f"║    send messages\n"
+            f"╚═══════════════════╝"
+        )
     except Exception as e:
         logger.error(f"Error unlocking chat: {e}")
         await update.message.reply_text(Messages.ERROR)
@@ -1033,7 +1082,7 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not is_owner(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ Only group owner can use this command.")
+        await update.message.reply_text("⛔ Only group owner can use this command.")
         return
     
     # Get group settings
@@ -1047,15 +1096,14 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     captcha = group.get('captcha_enabled', False)
     antiraid = group.get('antiraid_enabled', False)
     
-    text = f"""
-{Format.TOP_LEFT}{Format.HORIZONTAL * 33}{Format.TOP_RIGHT}
-{Format.VERTICAL} ⚙️ **Group Settings**{Format.VERTICAL}
-{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}
-{Format.VERTICAL} **Group:** {chat.title[:20]}{Format.VERTICAL}
-{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}
-{Format.VERTICAL} Toggle features below:{Format.VERTICAL}
-{Format.BOTTOM_LEFT}{Format.HORIZONTAL * 33}{Format.BOTTOM_RIGHT}
-"""
+    text = f"""╔═══════════════════╗
+║ ⚙️ **Settings**     ║
+╠═══════════════════╣
+║ 📋 **Group:** {chat.title[:15]}
+║ 👑 **Owner:** {user.first_name[:12]}
+╠═══════════════════╣
+║ 📝 Toggle features:
+╚═══════════════════╝"""
     
     await update.message.reply_text(
         text,
@@ -1074,7 +1122,7 @@ async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not is_owner(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ Only group owner can use this command.")
+        await update.message.reply_text("⛔ Only group owner can use this command.")
         return
     
     group = db.get_group(chat.id)
@@ -1085,8 +1133,12 @@ async def welcome_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     current = group.get('welcome_enabled', True)
     db.update_group_setting(chat.id, 'welcome_enabled', not current)
     
-    status = "enabled" if not current else "disabled"
-    await update.message.reply_text(f"{Emojis.CHECK} Welcome messages {status}!")
+    status = "✅ Enabled" if not current else "❌ Disabled"
+    await update.message.reply_text(
+        f"╔═══════════════════╗\n"
+        f"║ 👋 Welcome {status[:8]}  ║\n"
+        f"╚═══════════════════╝"
+    )
 
 
 async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1099,7 +1151,7 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not is_owner(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ Only group owner can use this command.")
+        await update.message.reply_text("⛔ Only group owner can use this command.")
         return
     
     group = db.get_group(chat.id)
@@ -1110,8 +1162,12 @@ async def goodbye_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     current = group.get('goodbye_enabled', False)
     db.update_group_setting(chat.id, 'goodbye_enabled', not current)
     
-    status = "enabled" if not current else "disabled"
-    await update.message.reply_text(f"{Emojis.CHECK} Goodbye messages {status}!")
+    status = "✅ Enabled" if not current else "❌ Disabled"
+    await update.message.reply_text(
+        f"╔═══════════════════╗\n"
+        f"║ 👋 Goodbye {status[:8]} ║\n"
+        f"╚═══════════════════╝"
+    )
 
 
 async def captcha_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1124,7 +1180,7 @@ async def captcha_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not is_owner(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ Only group owner can use this command.")
+        await update.message.reply_text("⛔ Only group owner can use this command.")
         return
     
     group = db.get_group(chat.id)
@@ -1135,8 +1191,12 @@ async def captcha_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     current = group.get('captcha_enabled', False)
     db.update_group_setting(chat.id, 'captcha_enabled', not current)
     
-    status = "enabled" if not current else "disabled"
-    await update.message.reply_text(f"{Emojis.CHECK} Captcha {status}!")
+    status = "✅ Enabled" if not current else "❌ Disabled"
+    await update.message.reply_text(
+        f"╔═══════════════════╗\n"
+        f"║ 🔒 Captcha {status[:8]} ║\n"
+        f"╚═══════════════════╝"
+    )
 
 
 async def filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1149,7 +1209,7 @@ async def filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not is_owner(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ Only group owner can use this command.")
+        await update.message.reply_text("⛔ Only group owner can use this command.")
         return
     
     if len(context.args) < 2:
@@ -1163,7 +1223,14 @@ async def filter_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     response = ' '.join(context.args[1:])
     
     if db.add_filter(chat.id, keyword, response, user.id):
-        await update.message.reply_text(f"{Emojis.CHECK} Filter added: `{keyword}`", parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(
+            f"╔═══════════════════╗\n"
+            f"║ ✅ Filter Added     ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📝 `{keyword}`\n"
+            f"╚═══════════════════╝",
+            parse_mode=ParseMode.MARKDOWN
+        )
     else:
         await update.message.reply_text(Messages.ERROR)
 
@@ -1178,7 +1245,7 @@ async def stopfilter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     
     if not is_owner(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ Only group owner can use this command.")
+        await update.message.reply_text("⛔ Only group owner can use this command.")
         return
     
     if not context.args:
@@ -1188,7 +1255,14 @@ async def stopfilter_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     keyword = context.args[0].lower()
     
     if db.remove_filter(chat.id, keyword):
-        await update.message.reply_text(f"{Emojis.CHECK} Filter removed: `{keyword}`", parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text(
+            f"╔═══════════════════╗\n"
+            f"║ ✅ Filter Removed   ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🗑️ `{keyword}`\n"
+            f"╚═══════════════════╝",
+            parse_mode=ParseMode.MARKDOWN
+        )
     else:
         await update.message.reply_text(Messages.ERROR)
 
@@ -1203,11 +1277,11 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not is_owner(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ Only group owner can use this command.")
+        await update.message.reply_text("⛔ Only group owner can use this command.")
         return
     
     if not can_promote(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to promote members.")
+        await update.message.reply_text("⛔ You don't have permission to promote members.")
         return
     
     if not update.message.reply_to_message:
@@ -1234,7 +1308,12 @@ async def promote_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.add_log(chat.id, user.id, 'promote', target.id)
         
         await update.message.reply_text(
-            f"{Emojis.CHECK} **Promoted** {target.mention_html()} to admin!",
+            f"╔═══════════════════╗\n"
+            f"║ ⬆️ User Promoted    ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 👤 {target.mention_html()}\n"
+            f"║ 👑 Now an admin\n"
+            f"╚═══════════════════╝",
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
@@ -1252,11 +1331,11 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     if not is_owner(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ Only group owner can use this command.")
+        await update.message.reply_text("⛔ Only group owner can use this command.")
         return
     
     if not can_promote(context.bot, chat.id, user.id):
-        await update.message.reply_text("❌ You don't have permission to demote members.")
+        await update.message.reply_text("⛔ You don't have permission to demote members.")
         return
     
     if not update.message.reply_to_message:
@@ -1284,7 +1363,12 @@ async def demote_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.add_log(chat.id, user.id, 'demote', target.id)
         
         await update.message.reply_text(
-            f"{Emojis.CHECK} **Demoted** {target.mention_html()}",
+            f"╔═══════════════════╗\n"
+            f"║ ⬇️ User Demoted     ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 👤 {target.mention_html()}\n"
+            f"║ 👤 No longer admin\n"
+            f"╚═══════════════════╝",
             parse_mode=ParseMode.HTML
         )
     except Exception as e:
@@ -1310,7 +1394,14 @@ async def setstartvideo_command(update: Update, context: ContextTypes.DEFAULT_TY
     file_id = video.file_id
     
     if db.set_config('start_video', file_id):
-        await update.message.reply_text(f"{Emojis.CHECK} Start video set successfully!")
+        await update.message.reply_text(
+            f"╔═══════════════════╗\n"
+            f"║ ✅ Video Set!       ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🎬 Start video\n"
+            f"║    configured\n"
+            f"╚═══════════════════╝"
+        )
     else:
         await update.message.reply_text(Messages.ERROR)
 
@@ -1331,7 +1422,14 @@ async def sethelpimg_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     file_id = photo.file_id
     
     if db.set_config('help_image', file_id):
-        await update.message.reply_text(f"{Emojis.CHECK} Help image set successfully!")
+        await update.message.reply_text(
+            f"╔═══════════════════╗\n"
+            f"║ ✅ Image Set!       ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🖼️ Help image\n"
+            f"║    configured\n"
+            f"╚═══════════════════╝"
+        )
     else:
         await update.message.reply_text(Messages.ERROR)
 
@@ -1346,17 +1444,15 @@ async def devstats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     stats = db.get_stats()
     
-    text = f"""
-{Format.TOP_LEFT}{Format.HORIZONTAL * 33}{Format.TOP_RIGHT}
-{Format.VERTICAL} ⚡ **Developer Statistics**{Format.VERTICAL}
-{Format.LEFT_T}{Format.HORIZONTAL * 33}{Format.RIGHT_T}
-{Format.VERTICAL} 👤 Total Users: `{stats['total_users']}`{Format.VERTICAL}
-{Format.VERTICAL} 👥 Total Groups: `{stats['total_groups']}`{Format.VERTICAL}
-{Format.VERTICAL} 📊 Total Commands: `{stats['total_commands']}`{Format.VERTICAL}
-{Format.VERTICAL} 👥 Total Members: `{stats['total_members']}`{Format.VERTICAL}
-{Format.VERTICAL} 🔒 Total Captchas: `{stats['total_captchas']}`{Format.VERTICAL}
-{Format.BOTTOM_LEFT}{Format.HORIZONTAL * 33}{Format.BOTTOM_RIGHT}
-"""
+    text = f"""╔═══════════════════╗
+║ ⚡ **Dev Stats**    ║
+╠═══════════════════╣
+║ 👤 Users: `{stats['total_users']}`
+║ 👥 Groups: `{stats['total_groups']}`
+║ 📊 Commands: `{stats['total_commands']}`
+║ 👥 Members: `{stats['total_members']}`
+║ 🔒 Captchas: `{stats['total_captchas']}`
+╚═══════════════════╝"""
     
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
@@ -1407,9 +1503,12 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             failed += 1
     
     await processing_msg.edit_text(
-        f"{Emojis.CHECK} Broadcast complete!\n"
-        f"Success: {success}\n"
-        f"Failed: {failed}"
+        f"╔═══════════════════╗\n"
+        f"║ ✅ Broadcast Done   ║\n"
+        f"╠═══════════════════╣\n"
+        f"║ 📤 Success: {success}\n"
+        f"║ ❌ Failed: {failed}\n"
+        f"╚═══════════════════╝"
     )
 
 
@@ -1422,9 +1521,13 @@ async def backup_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     await update.message.reply_text(
-        f"{Emojis.LOADING} Creating backup...\n\n"
-        f"Note: Full database backup requires pg_dump. "
-        f"Contact your database provider for backup options."
+        f"╔═══════════════════╗\n"
+        f"║ 💾 Backup           ║\n"
+        f"╠═══════════════════╣\n"
+        f"║ ⏳ Creating...\n"
+        f"║ 💡 Use pg_dump for\n"
+        f"║    full backup\n"
+        f"╚═══════════════════╝"
     )
 
 
@@ -1436,7 +1539,14 @@ async def restart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(Messages.NO_PERMISSION)
         return
     
-    await update.message.reply_text(f"{Emojis.LOADING} Restarting bot...")
+    await update.message.reply_text(
+        f"╔═══════════════════╗\n"
+        f"║ 🔄 Restarting...    ║\n"
+        f"╠═══════════════════╣\n"
+        f"║ ⏳ Bot will be\n"
+        f"║    back shortly!\n"
+        f"╚═══════════════════╝"
+    )
     
     # Exit the process - Render will restart it
     import sys
@@ -1446,7 +1556,7 @@ async def restart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ============== CALLBACK HANDLERS ==============
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle button callbacks"""
+    """Handle button callbacks - FIXED VERSION"""
     query = update.callback_query
     await query.answer()
     
@@ -1454,17 +1564,103 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     data = query.data
     
-    # Navigation callbacks
+    # Navigation callbacks - Edit message instead of calling commands
     if data == CallbackData.HELP:
-        await help_command(update, context)
+        # Show help menu directly
+        help_text = f"""╔═══════════════════╗
+║ 📖 **Help Menu**    ║
+╠═══════════════════╣
+║ 👤 **User Commands:**
+║ ├ /start - Start bot
+║ ├ /help - This menu
+║ ├ /anime `<name>` - Search
+║ ├ /character `<name>` - Search
+║ ├ /airing - Now airing
+║ ├ /top - Top anime
+║ └ /profile - Your profile
+║
+║ 👮 **Admin Commands:**
+║ ├ /mute, /unmute
+║ ├ /kick, /ban, /unban
+║ ├ /warn, /purge
+║ ├ /pin, /unpin
+║ └ /lock, /unlock
+║
+║ 👑 **Owner Commands:**
+║ ├ /settings - Configure
+║ ├ /welcome, /goodbye
+║ ├ /captcha, /filter
+║ └ /promote, /demote
+╚═══════════════════╝"""
+        await query.edit_message_text(
+            help_text,
+            reply_markup=Buttons.help_menu(),
+            parse_mode=ParseMode.MARKDOWN
+        )
     
     elif data == CallbackData.BACK_START:
         # Return to start menu
-        await start_command(update, context)
+        total_groups = db.get_total_groups()
+        total_users = db.get_total_users()
+        
+        start_text = f"""╔═══════════════════╗
+║   🤖 **{BOT_NAME}**   ║
+╠═══════════════════╣
+║ ✨ Welcome {user.first_name[:10]}!
+║
+║ 📊 **Statistics:**
+║ ├ 👥 Groups: `{total_groups}`
+║ ├ 👤 Users: `{total_users}`
+║ └ ⚡ Status: Online
+║
+║ 💫 **Features:**
+║ ├ 🔍 Anime Search
+║ ├ 👤 Character Info
+║ ├ 📺 Airing Schedule
+║ ├ ⚙️ Group Management
+║ └ 🛡️ Anti-Raid
+╚═══════════════════╝
+
+➕ Add me to your group for full power!"""
+        
+        await query.edit_message_text(
+            start_text,
+            reply_markup=Buttons.start_menu(),
+            parse_mode=ParseMode.MARKDOWN
+        )
     
     elif data == CallbackData.BACK_HELP:
         # Return to help menu
-        await help_command(update, context)
+        help_text = f"""╔═══════════════════╗
+║ 📖 **Help Menu**    ║
+╠═══════════════════╣
+║ 👤 **User Commands:**
+║ ├ /start - Start bot
+║ ├ /help - This menu
+║ ├ /anime `<name>` - Search
+║ ├ /character `<name>` - Search
+║ ├ /airing - Now airing
+║ ├ /top - Top anime
+║ └ /profile - Your profile
+║
+║ 👮 **Admin Commands:**
+║ ├ /mute, /unmute
+║ ├ /kick, /ban, /unban
+║ ├ /warn, /purge
+║ ├ /pin, /unpin
+║ └ /lock, /unlock
+║
+║ 👑 **Owner Commands:**
+║ ├ /settings - Configure
+║ ├ /welcome, /goodbye
+║ ├ /captcha, /filter
+║ └ /promote, /demote
+╚═══════════════════╝"""
+        await query.edit_message_text(
+            help_text,
+            reply_markup=Buttons.help_menu(),
+            parse_mode=ParseMode.MARKDOWN
+        )
     
     elif data == CallbackData.CLOSE:
         # Delete the message
@@ -1474,7 +1670,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
     
     elif data == CallbackData.ANIME_SEARCH:
-        text = f"{Format.box('Use /anime <name> to search for anime', ' Anime Search ')}"
+        text = f"""╔═══════════════════╗
+║ 🔍 **Anime Search** ║
+╠═══════════════════╣
+║ 📝 Use command:
+║ `/anime <name>`
+║
+║ 💡 Example:
+║ `/anime Naruto`
+╚═══════════════════╝"""
         await query.edit_message_text(
             text,
             reply_markup=Buttons.back_to_help(),
@@ -1482,7 +1686,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     
     elif data == CallbackData.CHARACTER_SEARCH:
-        text = f"{Format.box('Use /character <name> to search for characters', ' Character Search ')}"
+        text = f"""╔═══════════════════╗
+║ 👤 **Character**    ║
+╠═══════════════════╣
+║ 📝 Use command:
+║ `/character <name>`
+║
+║ 💡 Example:
+║ `/character Luffy`
+╚═══════════════════╝"""
         await query.edit_message_text(
             text,
             reply_markup=Buttons.back_to_help(),
@@ -1490,19 +1702,111 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     
     elif data == CallbackData.AIRING:
-        await airing_command(update, context)
+        # Fetch and show airing anime
+        try:
+            response = requests.get(
+                f"{JIKAN_BASE_URL}/seasons/now",
+                params={'limit': 10},
+                timeout=10
+            )
+            data_api = response.json()
+            
+            if data_api.get('data'):
+                text = "╔═══════════════════╗\n"
+                text += "║ 📺 **Now Airing**   ║\n"
+                text += "╠═══════════════════╣\n"
+                
+                for i, anime in enumerate(data_api['data'][:10], 1):
+                    title = anime.get('title', 'Unknown')[:18]
+                    score = anime.get('score', 'N/A')
+                    text += f"║ `{i:2d}.` {title}\n"
+                    text += f"║     ⭐ {score}\n"
+                
+                text += "╚═══════════════════╝"
+            else:
+                text = "❌ No airing anime found."
+            
+            await query.edit_message_text(
+                text,
+                reply_markup=Buttons.back_to_help(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            logger.error(f"Error in airing callback: {e}")
+            await query.edit_message_text(
+                Messages.ERROR,
+                reply_markup=Buttons.back_to_help()
+            )
     
     elif data == CallbackData.TOP_ANIME:
-        await top_command(update, context)
+        # Fetch and show top anime
+        try:
+            response = requests.get(
+                f"{JIKAN_BASE_URL}/top/anime",
+                params={'limit': 10},
+                timeout=10
+            )
+            data_api = response.json()
+            
+            if data_api.get('data'):
+                text = "╔═══════════════════╗\n"
+                text += "║ 🔥 **Top Anime**    ║\n"
+                text += "╠═══════════════════╣\n"
+                
+                for i, anime in enumerate(data_api['data'][:10], 1):
+                    title = anime.get('title', 'Unknown')[:16]
+                    score = anime.get('score', 'N/A')
+                    text += f"║ `{i:2d}.` {title}\n"
+                    text += f"║     ⭐ {score}\n"
+                
+                text += "╚═══════════════════╝"
+            else:
+                text = "❌ No top anime found."
+            
+            await query.edit_message_text(
+                text,
+                reply_markup=Buttons.back_to_help(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            logger.error(f"Error in top callback: {e}")
+            await query.edit_message_text(
+                Messages.ERROR,
+                reply_markup=Buttons.back_to_help()
+            )
     
     elif data == CallbackData.PROFILE:
-        await profile_command(update, context)
+        # Show user profile
+        user_data = db.get_user(user.id)
+        
+        text = f"""╔═══════════════════╗
+║ 👤 **Your Profile** ║
+╠═══════════════════╣
+║ 📝 **Name:** {user.first_name[:15]}
+║ 🆔 **ID:** `{user.id}`
+║ 🔗 **Username:** @{user.username or 'N/A'}
+╠═══════════════════╣
+║ 📊 **Statistics:**
+║ └ 📈 Commands: {user_data.get('command_count', 0) if user_data else 0}
+╚═══════════════════╝"""
+        
+        await query.edit_message_text(
+            text,
+            reply_markup=Buttons.profile_menu(),
+            parse_mode=ParseMode.MARKDOWN
+        )
     
     elif data == CallbackData.SETTINGS:
         # Show settings
         if chat.type == 'private':
             await query.edit_message_text(
-                f"{Format.box('Settings are only available in groups', ' Settings ')}",
+                f"╔═══════════════════╗\n"
+                f"║ ⚙️ **Settings**     ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ 👥 Group only!\n"
+                f"║ Add me to group\n"
+                f"║ to use settings\n"
+                f"╚═══════════════════╝",
                 reply_markup=Buttons.back_to_help(),
                 parse_mode=ParseMode.MARKDOWN
             )
@@ -1515,14 +1819,25 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 antiraid = group.get('antiraid_enabled', False)
                 
                 await query.edit_message_text(
-                    f"{Format.box('Group Settings', ' Settings ')}",
+                    f"╔═══════════════════╗\n"
+                    f"║ ⚙️ **Settings**     ║\n"
+                    f"╠═══════════════════╣\n"
+                    f"║ 📋 {chat.title[:15]}\n"
+                    f"║ 📝 Toggle below:\n"
+                    f"╚═══════════════════╝",
                     reply_markup=Buttons.settings_menu(welcome, goodbye, captcha, antiraid),
                     parse_mode=ParseMode.MARKDOWN
                 )
     
     elif data == CallbackData.MUSIC:
         await query.edit_message_text(
-            f"{Format.box('Mimi Tunes - Coming Soon!', ' Music ')}",
+            f"╔═══════════════════╗\n"
+            f"║ 🎵 **Mimi Tunes**   ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🎶 Coming Soon!\n"
+            f"║\n"
+            f"║ 🚧 Under development\n"
+            f"╚═══════════════════╝",
             reply_markup=Buttons.music_menu(),
             parse_mode=ParseMode.MARKDOWN
         )
@@ -1530,12 +1845,17 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == CallbackData.DEV:
         if is_dev(user.id):
             await query.edit_message_text(
-                f"{Format.box('Developer Zone', ' Dev ')}",
+                f"╔═══════════════════╗\n"
+                f"║ ⚡ **Dev Zone**     ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ 👑 Developer only\n"
+                f"║ Choose an action:\n"
+                f"╚═══════════════════╝",
                 reply_markup=Buttons.dev_menu(),
                 parse_mode=ParseMode.MARKDOWN
             )
         else:
-            await query.answer("❌ Access denied!", show_alert=True)
+            await query.answer("⛔ Access denied!", show_alert=True)
     
     # Settings toggles
     elif data == CallbackData.WELCOME_TOGGLE:
@@ -1543,33 +1863,341 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             group = db.get_group(chat.id)
             current = group.get('welcome_enabled', True) if group else True
             db.update_group_setting(chat.id, 'welcome_enabled', not current)
-            await query.answer(f"Welcome {'disabled' if current else 'enabled'}!")
+            status = "disabled" if current else "enabled"
+            await query.answer(f"👋 Welcome {status}!")
+            # Refresh settings menu
+            group = db.get_group(chat.id)
+            welcome = group.get('welcome_enabled', True)
+            goodbye = group.get('goodbye_enabled', False)
+            captcha = group.get('captcha_enabled', False)
+            antiraid = group.get('antiraid_enabled', False)
+            await query.edit_message_reply_markup(
+                reply_markup=Buttons.settings_menu(welcome, goodbye, captcha, antiraid)
+            )
         else:
-            await query.answer("❌ Only owner can change settings!", show_alert=True)
+            await query.answer("⛔ Only owner can change settings!", show_alert=True)
     
     elif data == CallbackData.GOODBYE_TOGGLE:
         if is_owner(context.bot, chat.id, user.id):
             group = db.get_group(chat.id)
             current = group.get('goodbye_enabled', False) if group else False
             db.update_group_setting(chat.id, 'goodbye_enabled', not current)
-            await query.answer(f"Goodbye {'disabled' if current else 'enabled'}!")
+            status = "disabled" if current else "enabled"
+            await query.answer(f"👋 Goodbye {status}!")
+            # Refresh settings menu
+            group = db.get_group(chat.id)
+            welcome = group.get('welcome_enabled', True)
+            goodbye = group.get('goodbye_enabled', False)
+            captcha = group.get('captcha_enabled', False)
+            antiraid = group.get('antiraid_enabled', False)
+            await query.edit_message_reply_markup(
+                reply_markup=Buttons.settings_menu(welcome, goodbye, captcha, antiraid)
+            )
         else:
-            await query.answer("❌ Only owner can change settings!", show_alert=True)
+            await query.answer("⛔ Only owner can change settings!", show_alert=True)
     
     elif data == CallbackData.CAPTCHA_TOGGLE:
         if is_owner(context.bot, chat.id, user.id):
             group = db.get_group(chat.id)
             current = group.get('captcha_enabled', False) if group else False
             db.update_group_setting(chat.id, 'captcha_enabled', not current)
-            await query.answer(f"Captcha {'disabled' if current else 'enabled'}!")
+            status = "disabled" if current else "enabled"
+            await query.answer(f"🔒 Captcha {status}!")
+            # Refresh settings menu
+            group = db.get_group(chat.id)
+            welcome = group.get('welcome_enabled', True)
+            goodbye = group.get('goodbye_enabled', False)
+            captcha = group.get('captcha_enabled', False)
+            antiraid = group.get('antiraid_enabled', False)
+            await query.edit_message_reply_markup(
+                reply_markup=Buttons.settings_menu(welcome, goodbye, captcha, antiraid)
+            )
         else:
-            await query.answer("❌ Only owner can change settings!", show_alert=True)
+            await query.answer("⛔ Only owner can change settings!", show_alert=True)
     
     elif data == CallbackData.ANTIRAID_TOGGLE:
         if is_owner(context.bot, chat.id, user.id):
             group = db.get_group(chat.id)
             current = group.get('antiraid_enabled', False) if group else False
             db.update_group_setting(chat.id, 'antiraid_enabled', not current)
-            await query.answer(f"Anti-raid {'disabled' if current else 'enabled'}!")
+            status = "disabled" if current else "enabled"
+            await query.answer(f"🛡️ Anti-raid {status}!")
+            # Refresh settings menu
+            group = db.get_group(chat.id)
+            welcome = group.get('welcome_enabled', True)
+            goodbye = group.get('goodbye_enabled', False)
+            captcha = group.get('captcha_enabled', False)
+            antiraid = group.get('antiraid_enabled', False)
+            await query.edit_message_reply_markup(
+                reply_markup=Buttons.settings_menu(welcome, goodbye, captcha, antiraid)
+            )
         else:
-            await query.answer("❌ Only owner can change settings!", show_alert=True)
+            await query.answer("⛔ Only owner can change settings!", show_alert=True)
+    
+    # Admin menu callbacks - Show info messages
+    elif data == CallbackData.ADMIN_MUTE:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ 🔇 **Mute User**    ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📝 Reply to user\n"
+            f"║ and type:\n"
+            f"║ `/mute`\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.back_to_help(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    elif data == CallbackData.ADMIN_KICK:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ 👢 **Kick User**    ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📝 Reply to user\n"
+            f"║ and type:\n"
+            f"║ `/kick`\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.back_to_help(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    elif data == CallbackData.ADMIN_BAN:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ 🚫 **Ban User**     ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📝 Reply to user\n"
+            f"║ and type:\n"
+            f"║ `/ban`\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.back_to_help(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    elif data == CallbackData.ADMIN_WARN:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ ⚠️ **Warn User**    ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📝 Reply to user\n"
+            f"║ and type:\n"
+            f"║ `/warn [reason]`\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.back_to_help(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    elif data == CallbackData.ADMIN_PURGE:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ 🗑️ **Purge Msgs**   ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📝 Type:\n"
+            f"║ `/purge <number>`\n"
+            f"║\n"
+            f"║ 💡 Max: 100 msgs\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.back_to_help(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    elif data == CallbackData.ADMIN_PIN:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ 📌 **Pin Msg**      ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📝 Reply to msg\n"
+            f"║ and type:\n"
+            f"║ `/pin`\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.back_to_help(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    elif data == CallbackData.ADMIN_LOCK:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ 🔒 **Lock Chat**    ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📝 Type:\n"
+            f"║ `/lock`\n"
+            f"║\n"
+            f"║ 🔓 `/unlock` to open\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.back_to_help(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    # Dev menu callbacks
+    elif data == CallbackData.DEV_STATS:
+        if is_dev(user.id):
+            stats = db.get_stats()
+            text = f"""╔═══════════════════╗
+║ ⚡ **Dev Stats**    ║
+╠═══════════════════╣
+║ 👤 Users: `{stats['total_users']}`
+║ 👥 Groups: `{stats['total_groups']}`
+║ 📊 Commands: `{stats['total_commands']}`
+║ 👥 Members: `{stats['total_members']}`
+║ 🔒 Captchas: `{stats['total_captchas']}`
+╚═══════════════════╝"""
+            await query.edit_message_text(
+                text,
+                reply_markup=Buttons.dev_menu(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            await query.answer("⛔ Access denied!", show_alert=True)
+    
+    elif data == CallbackData.DEV_BROADCAST:
+        if is_dev(user.id):
+            await query.edit_message_text(
+                f"╔═══════════════════╗\n"
+                f"║ 📢 **Broadcast**    ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ 📝 Reply to a msg\n"
+                f"║ and type:\n"
+                f"║ `/broadcast`\n"
+                f"╚═══════════════════╝",
+                reply_markup=Buttons.dev_menu(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            await query.answer("⛔ Access denied!", show_alert=True)
+    
+    elif data == CallbackData.DEV_BACKUP:
+        if is_dev(user.id):
+            await query.edit_message_text(
+                f"╔═══════════════════╗\n"
+                f"║ 💾 **Backup**       ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ ⏳ Use pg_dump\n"
+                f"║ for full backup\n"
+                f"║\n"
+                f"║ 💡 Contact provider\n"
+                f"╚═══════════════════╝",
+                reply_markup=Buttons.dev_menu(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            await query.answer("⛔ Access denied!", show_alert=True)
+    
+    elif data == CallbackData.DEV_RESTART:
+        if is_dev(user.id):
+            await query.edit_message_text(
+                f"╔═══════════════════╗\n"
+                f"║ 🔄 **Restart**      ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ ⏳ Type:\n"
+                f"║ `/restart`\n"
+                f"║\n"
+                f"║ ⚠️ Bot will restart\n"
+                f"╚═══════════════════╝",
+                reply_markup=Buttons.dev_menu(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            await query.answer("⛔ Access denied!", show_alert=True)
+    
+    elif data == CallbackData.DEV_SETVIDEO:
+        if is_dev(user.id):
+            await query.edit_message_text(
+                f"╔═══════════════════╗\n"
+                f"║ 🎬 **Set Video**    ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ 📝 Reply to video\n"
+                f"║ and type:\n"
+                f"║ `/setstartvideo`\n"
+                f"╚═══════════════════╝",
+                reply_markup=Buttons.dev_menu(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            await query.answer("⛔ Access denied!", show_alert=True)
+    
+    elif data == CallbackData.DEV_SETIMG:
+        if is_dev(user.id):
+            await query.edit_message_text(
+                f"╔═══════════════════╗\n"
+                f"║ 🖼️ **Set Image**    ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ 📝 Reply to photo\n"
+                f"║ and type:\n"
+                f"║ `/sethelpimg`\n"
+                f"╚═══════════════════╝",
+                reply_markup=Buttons.dev_menu(),
+                parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            await query.answer("⛔ Access denied!", show_alert=True)
+    
+    # Music menu callbacks
+    elif data == CallbackData.MUSIC_PLAY:
+        await query.answer("🎵 Coming soon!", show_alert=True)
+    
+    elif data == CallbackData.MUSIC_PAUSE:
+        await query.answer("⏸️ Coming soon!", show_alert=True)
+    
+    elif data == CallbackData.MUSIC_SKIP:
+        await query.answer("⏭️ Coming soon!", show_alert=True)
+    
+    elif data == CallbackData.MUSIC_QUEUE:
+        await query.answer("🔁 Coming soon!", show_alert=True)
+    
+    # Profile menu callbacks
+    elif data == CallbackData.PROFILE_STATS:
+        user_data = db.get_user(user.id)
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ 📊 **Your Stats**   ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 📈 Commands:\n"
+            f"║ `{user_data.get('command_count', 0) if user_data else 0}`\n"
+            f"║\n"
+            f"║ 🏆 Keep using bot!\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.profile_menu(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    elif data == CallbackData.PROFILE_ACHIEVEMENTS:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ 🏆 **Achievements** ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🥇 Early Adopter\n"
+            f"║ 🥈 Active User\n"
+            f"║\n"
+            f"║ 🎯 More coming!\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.profile_menu(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    elif data == CallbackData.PROFILE_SETTINGS:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ ⚙️ **Settings**     ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🚧 Coming soon!\n"
+            f"║\n"
+            f"║ 💡 Customize your\n"
+            f"║    profile\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.profile_menu(),
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    elif data == CallbackData.PROFILE_HISTORY:
+        await query.edit_message_text(
+            f"╔═══════════════════╗\n"
+            f"║ 📜 **History**      ║\n"
+            f"╠═══════════════════╣\n"
+            f"║ 🚧 Coming soon!\n"
+            f"║\n"
+            f"║ 📊 View your\n"
+            f"║    activity\n"
+            f"╚═══════════════════╝",
+            reply_markup=Buttons.profile_menu(),
+            parse_mode=ParseMode.MARKDOWN
+        )

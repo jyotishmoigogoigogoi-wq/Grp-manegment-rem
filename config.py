@@ -22,55 +22,24 @@ DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 # ============== AESTHETIC FORMATTING ==============
 class Format:
-    """Aesthetic box formatting templates"""
-    
-    # Box characters
-    TOP_LEFT = "┏"
-    TOP_RIGHT = "┓"
-    BOTTOM_LEFT = "┗"
-    BOTTOM_RIGHT = "┛"
-    HORIZONTAL = "━"
-    VERTICAL = "┃"
-    LEFT_T = "┣"
-    RIGHT_T = "┫"
+    """Aesthetic formatting templates - Telegram Compatible"""
     
     @staticmethod
     def box(content: str, title: str = "") -> str:
-        """Create a formatted box around content"""
-        lines = content.split('\n')
-        max_width = max(len(line) for line in lines) if lines else 0
+        """Create a formatted box around content - Works in Telegram"""
         if title:
-            max_width = max(max_width, len(title) + 4)
-        
-        width = min(max_width + 2, 35)
-        
-        # Top border with title
-        if title:
-            top = f"{Format.TOP_LEFT}{Format.HORIZONTAL}{title}{Format.HORIZONTAL * (width - len(title) - 1)}{Format.TOP_RIGHT}"
-        else:
-            top = f"{Format.TOP_LEFT}{Format.HORIZONTAL * (width + 1)}{Format.TOP_RIGHT}"
-        
-        # Content lines
-        middle = ""
-        for line in lines:
-            padding = width - len(line) + 1
-            middle += f"\n{Format.VERTICAL} {line}{' ' * padding}{Format.VERTICAL}"
-        
-        # Bottom border
-        bottom = f"\n{Format.BOTTOM_LEFT}{Format.HORIZONTAL * (width + 1)}{Format.BOTTOM_RIGHT}"
-        
-        return top + middle + bottom
+            return f"╔═══❰ {title} ❱═══╗\n{content}\n╚════════════════╝"
+        return f"╔════════════════╗\n{content}\n╚════════════════╝"
     
     @staticmethod
-    def separator(width: int = 33) -> str:
+    def section(title: str) -> str:
+        """Create a section header"""
+        return f"\n┌─❰ {title} ❱─┐"
+    
+    @staticmethod
+    def separator() -> str:
         """Create a separator line"""
-        return f"{Format.LEFT_T}{Format.HORIZONTAL * width}{Format.RIGHT_T}"
-    
-    @staticmethod
-    def center(text: str, width: int = 31) -> str:
-        """Center text within box"""
-        padding = (width - len(text)) // 2
-        return f"{' ' * padding}{text}{' ' * (width - len(text) - padding)}"
+        return "━━━━━━━━━━━━━━━"
 
 # ============== MESSAGES ==============
 class Messages:
@@ -140,10 +109,10 @@ class Messages:
 
     ANIME_NOT_FOUND = "❌ Anime not found. Please check the name and try again."
     CHARACTER_NOT_FOUND = "❌ Character not found. Please check the name and try again."
-    NO_PERMISSION = "❌ You don't have permission to use this command."
-    GROUP_ONLY = "❌ This command only works in groups."
-    PRIVATE_ONLY = "❌ This command only works in private chat."
-    REPLY_REQUIRED = "❌ Please reply to a message to use this command."
+    NO_PERMISSION = "⛔ You don't have permission to use this command."
+    GROUP_ONLY = "👥 This command only works in groups."
+    PRIVATE_ONLY = "💬 This command only works in private chat."
+    REPLY_REQUIRED = "↩️ Please reply to a message to use this command."
     PROCESSING = "⏳ Processing..."
     SUCCESS = "✅ Success!"
     ERROR = "❌ An error occurred. Please try again."
@@ -178,6 +147,16 @@ class Emojis:
     HEART = "❤️"
     ARROW = "➡️"
     LOADING = "⏳"
+    LOCK = "🔒"
+    UNLOCK = "🔓"
+    PIN = "📌"
+    UNPIN = "📍"
+    KICK = "👢"
+    BAN = "🚫"
+    MUTE = "🔇"
+    UNMUTE = "🔊"
+    WARN = "⚠️"
+    PURGE = "🗑️"
 
 # ============== CALLBACK DATA ==============
 class CallbackData:
@@ -201,6 +180,32 @@ class CallbackData:
     GOODBYE_TOGGLE = "goodbye_toggle"
     CAPTCHA_TOGGLE = "captcha_toggle"
     ANTIRAID_TOGGLE = "antiraid_toggle"
+    # Admin callbacks
+    ADMIN_MUTE = "admin_mute"
+    ADMIN_UNMUTE = "admin_unmute"
+    ADMIN_KICK = "admin_kick"
+    ADMIN_BAN = "admin_ban"
+    ADMIN_WARN = "admin_warn"
+    ADMIN_PURGE = "admin_purge"
+    ADMIN_PIN = "admin_pin"
+    ADMIN_LOCK = "admin_lock"
+    # Dev callbacks
+    DEV_STATS = "dev_stats"
+    DEV_BROADCAST = "dev_broadcast"
+    DEV_BACKUP = "dev_backup"
+    DEV_RESTART = "dev_restart"
+    DEV_SETVIDEO = "dev_setvideo"
+    DEV_SETIMG = "dev_setimg"
+    # Music callbacks
+    MUSIC_PLAY = "music_play"
+    MUSIC_PAUSE = "music_pause"
+    MUSIC_SKIP = "music_skip"
+    MUSIC_QUEUE = "music_queue"
+    # Profile callbacks
+    PROFILE_STATS = "profile_stats"
+    PROFILE_ACHIEVEMENTS = "profile_achievements"
+    PROFILE_SETTINGS = "profile_settings"
+    PROFILE_HISTORY = "profile_history"
 
 # ============== DATABASE TABLES ==============
 DB_TABLES = {

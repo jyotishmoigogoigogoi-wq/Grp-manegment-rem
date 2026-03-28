@@ -6,6 +6,7 @@ Developed by YorichiiPrime
 
 import logging
 import asyncio
+import random
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -16,7 +17,7 @@ from telegram.ext import (
     filters
 )
 
-from config import BOT_TOKEN, BOT_NAME, DEVELOPER_NAME
+from config import BOT_TOKEN, BOT_NAME, DEVELOPER_NAME, Emojis
 from database import db
 from keep_alive import keep_alive
 from commands import (
@@ -253,7 +254,12 @@ async def handle_captcha_callback(update: Update, context):
         if captcha and captcha['session_id'] == captcha_id:
             db.verify_captcha(captcha_id)
             await query.edit_message_text(
-                f"{Emojis.CHECK} {user.mention_html()} verified successfully!",
+                f"╔═══════════════════╗\n"
+                f"║ ✅ Verified!        ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ 👤 {user.mention_html()}\n"
+                f"║ ✓ Human confirmed\n"
+                f"╚═══════════════════╝",
                 parse_mode='HTML'
             )
         else:
@@ -269,7 +275,12 @@ async def handle_captcha_callback(update: Update, context):
             if captcha['captcha_answer'] == answer:
                 db.verify_captcha(captcha_id)
                 await query.edit_message_text(
-                    f"{Emojis.CHECK} {user.mention_html()} answered correctly!",
+                    f"╔═══════════════════╗\n"
+                    f"║ ✅ Correct!         ║\n"
+                    f"╠═══════════════════╣\n"
+                    f"║ 👤 {user.mention_html()}\n"
+                    f"║ ✓ Math verified\n"
+                    f"╚═══════════════════╝",
                     parse_mode='HTML'
                 )
             else:
@@ -286,7 +297,12 @@ async def error_handler(update: Update, context):
     if update and update.effective_message:
         try:
             await update.effective_message.reply_text(
-                "❌ An error occurred while processing your request. Please try again."
+                f"╔═══════════════════╗\n"
+                f"║ ❌ Error!           ║\n"
+                f"╠═══════════════════╣\n"
+                f"║ Something went\n"
+                f"║ wrong. Try again.\n"
+                f"╚═══════════════════╝"
             )
         except:
             pass
@@ -365,11 +381,11 @@ def main():
     application.add_handler(CommandHandler("backup", backup_command))
     application.add_handler(CommandHandler("restart", restart_command))
     
-    # Callback handlers
-    application.add_handler(CallbackQueryHandler(button_callback))
-    
-    # Captcha callback handler (higher priority)
+    # Captcha callback handler (higher priority - must be FIRST)
     application.add_handler(CallbackQueryHandler(handle_captcha_callback, pattern=r'^captcha_'))
+    
+    # General callback handler
+    application.add_handler(CallbackQueryHandler(button_callback))
     
     # Chat member handlers
     application.add_handler(ChatMemberHandler(handle_new_member, ChatMemberHandler.CHAT_MEMBER))
@@ -388,5 +404,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import random  # Import here for captcha generation
     main()

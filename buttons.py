@@ -206,20 +206,20 @@ class Buttons:
         """Admin actions menu"""
         keyboard = [
             [
-                InlineKeyboardButton("🔇 Mute", callback_data="admin_mute"),
-                InlineKeyboardButton("🔊 Unmute", callback_data="admin_unmute")
+                InlineKeyboardButton("🔇 Mute", callback_data=CallbackData.ADMIN_MUTE),
+                InlineKeyboardButton("🔊 Unmute", callback_data=CallbackData.ADMIN_UNMUTE)
             ],
             [
-                InlineKeyboardButton("👢 Kick", callback_data="admin_kick"),
-                InlineKeyboardButton("🚫 Ban", callback_data="admin_ban")
+                InlineKeyboardButton("👢 Kick", callback_data=CallbackData.ADMIN_KICK),
+                InlineKeyboardButton("🚫 Ban", callback_data=CallbackData.ADMIN_BAN)
             ],
             [
-                InlineKeyboardButton("⚠️ Warn", callback_data="admin_warn"),
-                InlineKeyboardButton("🗑️ Purge", callback_data="admin_purge")
+                InlineKeyboardButton("⚠️ Warn", callback_data=CallbackData.ADMIN_WARN),
+                InlineKeyboardButton("🗑️ Purge", callback_data=CallbackData.ADMIN_PURGE)
             ],
             [
-                InlineKeyboardButton("📌 Pin", callback_data="admin_pin"),
-                InlineKeyboardButton("🔒 Lock", callback_data="admin_lock")
+                InlineKeyboardButton("📌 Pin", callback_data=CallbackData.ADMIN_PIN),
+                InlineKeyboardButton("🔒 Lock", callback_data=CallbackData.ADMIN_LOCK)
             ],
             [
                 InlineKeyboardButton("◀️ Back", callback_data=CallbackData.BACK_HELP),
@@ -235,16 +235,16 @@ class Buttons:
         """Developer menu"""
         keyboard = [
             [
-                InlineKeyboardButton("📊 Stats", callback_data="dev_stats"),
-                InlineKeyboardButton("📢 Broadcast", callback_data="dev_broadcast")
+                InlineKeyboardButton("📊 Stats", callback_data=CallbackData.DEV_STATS),
+                InlineKeyboardButton("📢 Broadcast", callback_data=CallbackData.DEV_BROADCAST)
             ],
             [
-                InlineKeyboardButton("💾 Backup", callback_data="dev_backup"),
-                InlineKeyboardButton("🔄 Restart", callback_data="dev_restart")
+                InlineKeyboardButton("💾 Backup", callback_data=CallbackData.DEV_BACKUP),
+                InlineKeyboardButton("🔄 Restart", callback_data=CallbackData.DEV_RESTART)
             ],
             [
-                InlineKeyboardButton("🎬 Set Start Video", callback_data="dev_setvideo"),
-                InlineKeyboardButton("🖼️ Set Help Image", callback_data="dev_setimg")
+                InlineKeyboardButton("🎬 Set Start Video", callback_data=CallbackData.DEV_SETVIDEO),
+                InlineKeyboardButton("🖼️ Set Help Image", callback_data=CallbackData.DEV_SETIMG)
             ],
             [
                 InlineKeyboardButton("◀️ Back", callback_data=CallbackData.BACK_START),
@@ -334,12 +334,12 @@ class Buttons:
         """Music/Mimi Tunes menu"""
         keyboard = [
             [
-                InlineKeyboardButton("🎵 Play", callback_data="music_play"),
-                InlineKeyboardButton("⏸️ Pause", callback_data="music_pause")
+                InlineKeyboardButton("🎵 Play", callback_data=CallbackData.MUSIC_PLAY),
+                InlineKeyboardButton("⏸️ Pause", callback_data=CallbackData.MUSIC_PAUSE)
             ],
             [
-                InlineKeyboardButton("⏭️ Skip", callback_data="music_skip"),
-                InlineKeyboardButton("🔁 Queue", callback_data="music_queue")
+                InlineKeyboardButton("⏭️ Skip", callback_data=CallbackData.MUSIC_SKIP),
+                InlineKeyboardButton("🔁 Queue", callback_data=CallbackData.MUSIC_QUEUE)
             ],
             [
                 InlineKeyboardButton("◀️ Back", callback_data=CallbackData.BACK_START),
@@ -355,12 +355,12 @@ class Buttons:
         """User profile menu"""
         keyboard = [
             [
-                InlineKeyboardButton("📊 Stats", callback_data="profile_stats"),
-                InlineKeyboardButton("🏆 Achievements", callback_data="profile_achievements")
+                InlineKeyboardButton("📊 Stats", callback_data=CallbackData.PROFILE_STATS),
+                InlineKeyboardButton("🏆 Achievements", callback_data=CallbackData.PROFILE_ACHIEVEMENTS)
             ],
             [
-                InlineKeyboardButton("⚙️ Settings", callback_data="profile_settings"),
-                InlineKeyboardButton("📜 History", callback_data="profile_history")
+                InlineKeyboardButton("⚙️ Settings", callback_data=CallbackData.PROFILE_SETTINGS),
+                InlineKeyboardButton("📜 History", callback_data=CallbackData.PROFILE_HISTORY)
             ],
             [
                 InlineKeyboardButton("◀️ Back", callback_data=CallbackData.BACK_HELP),
