@@ -1,0 +1,19 @@
+# ˹ʀᴇᴍ˼ Bot - Python Dependencies
+# Platform: Render.com
+# Database: Neon PostgreSQL
+
+# Telegram Bot API
+python-telegram-bot==20.7
+
+# Database
+psycopg2-binary==2.9.9
+
+# Web Server (Keep Alive)
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# HTTP Requests (Jikan API)
+requests==2.31.0
+
+# Utilities
+python-dotenv==1.0.0
